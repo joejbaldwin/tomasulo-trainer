@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tomasulo Trainer · Arquitectura de Computadores</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="learn.css">
+<link rel="stylesheet" href="ooo.css">
+<link rel="stylesheet" href="dp.css">
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <a class="brand" href="#/home"><span class="logo"><i></i><i></i><i></i></span><b>Tomasulo Trainer</b></a>
+    <nav id="nav"></nav>
+    <div class="side-foot">
+      <button id="langBtn" class="tbtn" title="English / Español"></button>
+      <button id="sndBtn" class="tbtn" title="Sound"></button>
+    </div>
+  </aside>
+  <main id="main"></main>
+</div>
+<script src="js/core.js"></script>
+<script src="js/learn.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/scen.js"></script>
+<script src="js/machine.js"></script>
+<script src="js/lessons.js"></script>
+<script src="js/sims.js"></script>
+<script src="js/datapath.js"></script>
+<script src="js/build.js"></script>
+<script src="js/more.js"></script>
+<script>if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(() => {});</script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+/* Datapath view: block diagram with lit buses */
+.dpwrap{background:#0a0e14;border:1px solid var(--line);border-radius:var(--r);padding:8px;margin:10px 0;overflow-x:auto}
+.dp{display:block;width:100%;min-width:640px;height:auto;font-family:system-ui,"Segoe UI",sans-serif}
+.dp text{font-size:12px;fill:var(--text)}
+.dp .mono{font-family:var(--mono);font-size:11.5px}
+.dp .bt{font-weight:700;font-size:12px}.dp .bs{fill:var(--mute);font-size:10.5px}
+.dp .wl{fill:#7d8aa3;font-size:10.5px;font-style:italic}.dp .cdbl{fill:#b8a6d4;font-style:normal;font-weight:600}
+.dp .mt{fill:#66738a}.dp .tg{fill:#ffcf7a}.dp .vl{fill:#8eeab8}.dp .rn{fill:var(--mute)}
+.dp .nw{fill:#fff;font-weight:700}.dp .hdl{fill:#4fd1a5;font-weight:700;font-size:11px}
+.dp .capd{fill:#8eeab8;font-weight:700}
+
+/* boxes, tinted like the slide figure */
+.bx{stroke-width:1.6;transition:stroke .2s,filter .2s}
+.bx.k-q{fill:#12233a;stroke:#3f6ea6}.bx.k-rob{fill:#10291f;stroke:#3f9a77}.bx.k-reg{fill:#2d1520;stroke:#a65370}
+.bx.k-au{fill:#2e1814;stroke:#c0614f}.bx.k-buf{fill:#21152e;stroke:#8a5bb8}.bx.k-mu{fill:#2b2414;stroke:#a68a4f}
+.bx.k-rs{fill:#17241a;stroke:#5f8a63}.bx.k-fu{fill:#10292b;stroke:#3fa3a6}.bx.k-mul,.bx.k-div{fill:#2b2810;stroke:#b8a53a}
+.bx.off{opacity:.35;stroke-dasharray:5 4}
+.bx.on{stroke-width:3.5;filter:drop-shadow(0 0 7px var(--c))}
+.rr{fill:rgba(255,255,255,.035);stroke:none}.rr.isn{fill:rgba(196,215,155,.2)}.rr.run{fill:rgba(230,165,163,.18)}.rr.wbn{fill:rgba(184,166,212,.28)}
+.rr.head{stroke:#4fd1a5;stroke-width:1.5}.rr.gone{fill:rgba(179,164,106,.32)}.rr.fl{fill:rgba(192,0,0,.35)}
+.rc{fill:rgba(255,255,255,.035)}.rc.chg{fill:rgba(61,220,132,.22);stroke:var(--hit)}
+.cdbv{fill:#2a2140;stroke:var(--s-wb);stroke-width:1.5}.dp .cdbt{fill:#e3d8ff;font-weight:700}
+
+/* wires */
+.w{fill:none;stroke:#34405a;stroke-width:2.4;stroke-linejoin:round}
+.w.off{opacity:.25}
+.ah{fill:#4a5873}
+.w.lit{stroke:var(--c);stroke-width:5;stroke-dasharray:11 6;animation:dpflow .55s linear infinite;filter:drop-shadow(0 0 4px var(--c))}
+@keyframes dpflow{to{stroke-dashoffset:-17}}
+@media (prefers-reduced-motion:reduce){.w.lit{animation:none;stroke-dasharray:none}}
+.st-if{--c:var(--s-if)}.st-is{--c:var(--s-is)}.st-ex{--c:var(--s-ex)}.st-m{--c:var(--s-m)}.st-wb{--c:var(--s-wb)}.st-c{--c:var(--s-c)}.st-x{--c:#ff3b3b}
+
+/* panels under the diagram */
+.dpgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin:4px 0 12px;align-items:start}
+@media(max-width:900px){.dpgrid{grid-template-columns:1fr}}
+.dpcard{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px}
+.dpck{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:.92rem}
+.dpck li{padding:6px 9px;border-radius:8px;background:var(--panel2)}
+.dpck li.ok{border-left:3px solid var(--s-c)}.dpck li.no{border-left:3px solid #66738a}
+.dpkey{display:grid;gap:6px;font-size:.88rem}
+.dpkey>div{display:flex;gap:9px;align-items:flex-start;padding:6px 8px;border-radius:8px;opacity:.55;transition:opacity .2s,background .2s}
+.dpkey>div.on{opacity:1;background:var(--panel2)}
+.dpkey .sg{flex:none;margin-top:2px}
+
+/* one-view layout: cronogram + strip + diagram stacked tight */
+.dphead{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin:4px 0 0}
+.dphead h2{margin:0;font-size:1.25rem}.dphead .scpick{margin:0}
+.dpctl{margin:8px 0 6px}
+.dpview{display:flex;flex-direction:column;gap:6px}
+.dpcr .crw{margin:0}
+.dpcr .cr th,.dpcr .cr td{height:22px;min-width:30px;font-size:.74rem;padding:0 3px}
+.dpcr .cr th.cri{font-size:.76rem;white-space:nowrap}
+.dpcr .cr thead th{cursor:pointer}
+.dpstrip{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:.86rem;min-height:30px;padding:4px 10px;background:var(--panel);border:1px solid var(--line);border-radius:10px}
+.dpcy{font-weight:700;color:var(--mute);font-size:.78rem;text-transform:uppercase;letter-spacing:.06em}
+.dpi{white-space:nowrap}.dpi .sg{font-size:.7rem;min-width:2em;padding:0 5px}
+.dpview .dpwrap{margin:0;padding:4px}
+.dpview .dp{max-height:max(380px,calc(100vh - 360px))}
+.dpmore{margin:12px 0}.dpmore summary{cursor:pointer;color:var(--mute);font-size:.9rem}
+.dpmore .dpgrid{margin-top:10px}
