@@ -1,6 +1,6 @@
 /* Offline support: every file is stored on the first visit.
    Online, the network copy is used (and the stored copy refreshed); offline, the stored copy is served. */
-const CACHE = 'tomasulo-trainer-v3';
+const CACHE = 'tomasulo-trainer-v4';
 const FILES = ['./', 'dp.css', 'index.html', 'js/build.js', 'js/core.js', 'js/datapath.js', 'js/engine.js', 'js/learn.js', 'js/lessons.js', 'js/machine.js', 'js/more.js', 'js/scen.js', 'js/sims.js', 'learn.css', 'ooo.css', 'style.css'];
 
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting())); });
