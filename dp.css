@@ -58,3 +58,12 @@
 .dpview .dp{max-height:max(380px,calc(100vh - 360px))}
 .dpmore{margin:12px 0}.dpmore summary{cursor:pointer;color:var(--mute);font-size:.9rem}
 .dpmore .dpgrid{margin-top:10px}
+
+/* clickable boxes and buses + the description under the diagram */
+.dp .hitw{fill:none;stroke:transparent;stroke-width:16;stroke-linejoin:round;cursor:pointer;pointer-events:stroke}
+.dp .hitb{fill:transparent;stroke:transparent;cursor:pointer;pointer-events:all}
+.dp .hitw:hover{stroke:rgba(90,169,255,.16)}.dp .hitb:hover{stroke:rgba(90,169,255,.55);stroke-width:2}
+.dp .hitw.sel{stroke:rgba(90,169,255,.42)}.dp .hitb.sel{stroke:var(--acc);stroke-width:3.5;fill:rgba(90,169,255,.1)}
+.dpx{min-height:2.6em;background:var(--panel2);border-radius:10px;padding:9px 13px;font-size:.93rem;line-height:1.45;border-left:3px solid var(--acc);margin-top:6px}
+.dpmap{margin:10px 0 4px}.dpmap .dpwrap{margin:0}
+.mnar{margin:10px 0}.mdp{margin:0 0 12px}.mdp .dpwrap{margin:0;padding:4px}

@@ -1,6 +1,6 @@
 'use strict';
 /* Scenarios. kind: 'course' = cronogram printed in the slides/solutions and reproduced cell for cell;
-   'nosol' = course exercise with no solution in the folder; 'mine' = extra case built from a rule the slides state. */
+   'mine' = extra case built from a rule the slides state. */
 
 const SCEN = {
   main: {
@@ -44,11 +44,10 @@ const SCEN = {
     ]
   },
   e37: {
-    kind: 'nosol', src: 'E3_7 · ej. 1', lat: { mul: 2, div: 3, add: 1, sub: 1 }, mem: 1, regs: { F2: 8, F14: 3, R1: 0 },
+    kind: 'course', src: 'E3_7 · ej. 1', lat: { mul: 2, div: 3, add: 1, sub: 1 }, mem: 1, regs: { F2: 8, F14: 3, R1: 0 },
     prog: ['DIVD F0,F2,F4', 'ADDD F10,F2,F8', 'SUBD F10,F8,F14', 'MULD F16,F2,F4', 'ADDD F2,F2,F8', 'SD F2,1000(R1)'],
     title: () => T('Exercise sheet E3_7', 'Boletín E3_7'),
-    watch: () => T('Same program as the solved Marcador sheet E3_6 (14 cycles there). Try it in the builder first.', 'El mismo programa que el boletín resuelto del Marcador E3_6 (allí 14 ciclos). Inténtalo antes en el constructor.'),
-    notes: [{ t: () => T("No official solution for E3_7 is in your folder: this cronogram is the simulator applying the rules that reproduce every solved one. The store is drawn EX, M, WB, as in the solved Marcador sheet E3_6.", "No hay solución oficial de E3_7 en tu carpeta: este cronograma es el simulador aplicando las reglas que reproducen todos los resueltos. El store se dibuja EX, M, WB, como en el boletín resuelto del Marcador E3_6.") }]
+    watch: () => T('Same program as the Marcador sheet E3_6 (14 cycles there). SUBD ignores the WAW on F10; SD takes F2 off the CDB in cycle 8.', 'El mismo programa que el boletín del Marcador E3_6 (allí 14 ciclos). SUBD ignora el WAW sobre F10; SD toma F2 del CDB en el ciclo 8.'),
   },
   e38: {
     kind: 'course', src: 'E3_8 · ej. 1.4', lat: {}, mem: 2, mlabel: 'MEM', memv: { 11: 7 },

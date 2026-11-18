@@ -160,7 +160,7 @@ View('drill', {
       { type: 'mc', q: T('Two instructions finish EX in the same cycle on different units. In Tomasulo they…', 'Dos instrucciones acaban EX en el mismo ciclo en unidades distintas. En Tomasulo…'), opts: [T('both do WB the next cycle', 'las dos hacen WB el ciclo siguiente'), T('take turns on the CDB', 'se turnan en el CDB')], a: 0, why: T('"WB allows one write per functional unit" in the course\'s machine; CDB saturation is listed as a limitation of the real design.', '"WB permite una escritura por unidad funcional" en la máquina del curso; la saturación del CDB figura como limitación del diseño real.') },
       { type: 'mc', q: T('Which is NOT kept per thread in SMT?', '¿Qué NO se mantiene por hilo en SMT?'), opts: ['PC', T('Register map', 'Mapa de registros'), T('Functional units', 'Unidades funcionales')], a: 2 },
       { type: 'mc', q: T('Static superscalar: hazard detection and scheduling are…', 'Superescalar estático: detección de riesgos y planificación son…'), opts: [T('hardware, static', 'hardware, estática'), T('software, static', 'software, estática'), T('hardware, dynamic', 'hardware, dinámica')], a: 0 },
-      { type: 'num', q: T('Sheet E3_6/E3_7 program: the Marcador needs 14 cycles. How many does the simulator give for Tomasulo?', 'Programa del boletín E3_6/E3_7: el Marcador necesita 14 ciclos. ¿Cuántos da el simulador para Tomasulo?'), a: 10, tol: 0 }
+      { type: 'num', q: T('Sheet E3_6/E3_7 program: the Marcador needs 14 cycles. How many does Tomasulo need (E3_7 solution)?', 'Programa del boletín E3_6/E3_7: el Marcador necesita 14 ciclos. ¿Cuántos necesita Tomasulo (solución de E3_7)?'), a: 10, tol: 0 }
     ]);
   }
 });

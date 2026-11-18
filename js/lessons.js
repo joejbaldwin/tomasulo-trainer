@@ -23,40 +23,14 @@ View('home', {
       return `<a class="card link ${isDone(id) ? 'isdone' : ''}" href="#/${id}"><div class="cnum">${k + 1}</div><div><h3>${v.icon} ${v.title()} ${isDone(id) ? '<span class="ck">✓</span>' : ''}</h3><p>${v.desc()}</p><small>≈ ${v.mins} min</small></div></a>`;
     }).join('')}</section>
     <section class="card tip">
-      <h3>${T('What is from the course and what is not', 'Qué es del curso y qué no')}</h3>
+      <h3>${T('Sources', 'Fuentes')}</h3>
       <ul>
-        <li>${T('<b>Reproduced cell for cell</b> by the simulator: L3_7 slides 15, 17, 18; L3_8 slides 13, 15; E3_8 exercise 1 part 4. The 5-stage and Marcador cronograms are copied from the solved sheets.', '<b>Reproducidos celda a celda</b> por el simulador: L3_7 diapositivas 15, 17, 18; L3_8 diapositivas 13, 15; E3_8 ejercicio 1 parte 4. Los cronogramas de 5 etapas y del Marcador están copiados de los boletines resueltos.')}</li>
-        <li>${T('<b>Not in your folder:</b> a solution for E3_7. The simulator\'s answer uses the same rules, but it is not the professor\'s.', '<b>No está en tu carpeta:</b> una solución de E3_7. La respuesta del simulador usa las mismas reglas, pero no es la del profesor.')}</li>
-        <li>${T('<b>Mine:</b> the extra cases (full station, busy unit, load after store, store commit), the table layout (fields from Hennessy &amp; Patterson, which the slides cite) and the register values. Each one is labelled where it appears.', '<b>Míos:</b> los casos extra (estación llena, unidad ocupada, carga tras store, commit de un store), el diseño de las tablas (campos de Hennessy y Patterson, que citan las diapositivas) y los valores de los registros. Cada uno está marcado donde aparece.')}</li>
+        <li>${T('<b>From the course, cell for cell:</b> L3_7 slides 15, 17, 18 · L3_8 slides 13, 15 · E3_7 · E3_8 part 4. The 5-stage and Marcador cronograms are copied from the solved sheets.', '<b>Del curso, celda a celda:</b> L3_7 diapositivas 15, 17, 18 · L3_8 diapositivas 13, 15 · E3_7 · E3_8 parte 4. Los cronogramas de 5 etapas y del Marcador están copiados de los boletines resueltos.')}</li>
+        <li>${T('<b>Mine</b>, marked <i>extra case</i>: full station, busy unit, load after store, store commit; also the register values.', '<b>Míos</b>, marcados <i>caso extra</i>: estación llena, unidad ocupada, carga tras store, commit de un store; y los valores de los registros.')}</li>
       </ul>
     </section>`;
   }
 });
-
-/* clickable block diagram, after the figures on L3_7 slide 3 and L3_8 slide 4 */
-function hwMap(spec) {
-  const B = [
-    ['q', 'q', T('Instruction queue', 'Cola de instrucciones'), 'IF → IS', T('Hands instructions over <b>in order</b>, one per cycle.', 'Entrega las instrucciones <b>en orden</b>, una por ciclo.')],
-    ['rg2', 'rg2', T('Registers + status', 'Registros + estado'), 'Qi', T('Each register holds a value, or the <b>tag</b> of the station that will produce it. That table is the renaming.', 'Cada registro guarda un valor, o la <b>etiqueta</b> de la estación que lo producirá. Esa tabla es el renombrado.')],
-    spec ? ['rob', 'rob', T('Reorder buffer', 'Búfer de reordenación'), 'ROB', T('Holds every result from WB until commit, in program order. Registers and memory change only from its head.', 'Guarda cada resultado desde WB hasta el commit, en orden de programa. Registros y memoria solo cambian desde su cabeza.')]
-      : ['x', 'rg2', T('Operand buses', 'Buses de operandos'), '', T('Carry register values to the stations at issue.', 'Llevan los valores de los registros a las estaciones en la emisión.')],
-    ['ar', '', '↓ ' + T('issue', 'emisión'), '', ''],
-    ['lb', 'rs', T('Load / store buffers', 'Búferes de carga / almac.'), T('address, data', 'dirección, dato'), T('Hold the computed address and the data waiting to be written. They also check earlier stores (disambiguation).', 'Guardan la dirección calculada y el dato pendiente de escribir. También comprueban stores anteriores (desambiguación).')],
-    ['ra', 'rs', T('Add stations', 'Estaciones Add'), 'Vj Vk Qj Qk', T('A reservation station stores the operation and its operands: a <b>value</b> (V) or the <b>tag</b> of who will produce it (Q). One group per functional unit: distributed control.', 'Una estación de reserva guarda la operación y sus operandos: un <b>valor</b> (V) o la <b>etiqueta</b> de quien lo producirá (Q). Un grupo por unidad funcional: control distribuido.')],
-    ['rm', 'rs', T('Mult stations', 'Estaciones Mult'), 'Vj Vk Qj Qk', T('Same idea for the multiplier and divider. An instruction waits here, not in a pipeline stage, so it blocks nobody behind it.', 'Lo mismo para multiplicador y divisor. La instrucción espera aquí, no en una etapa del pipeline, así que no bloquea a las siguientes.')],
-    ['ar', '', '↓ ' + T('when all operands are values', 'cuando todos los operandos son valores'), '', ''],
-    ['mu', 'fu', T('Memory unit', 'Unidad de memoria'), 'EX + M', T('One EX cycle for the address, then M for the access. Memory counts as one more functional unit.', 'Un ciclo EX para la dirección y luego M para el acceso. La memoria cuenta como otra unidad funcional.')],
-    ['fa', 'fu', T('Adders', 'Sumadores'), 'EX', T('Runs for its latency once the station has both values.', 'Ejecuta durante su latencia cuando la estación tiene ambos valores.')],
-    ['fm', 'fu', T('Multipliers', 'Multiplicadores'), 'EX', T('If several stations are ready for one unit, one is chosen (FIFO).', 'Si varias estaciones están listas para una unidad, se elige una (FIFO).')],
-    ['bus', 'bus', 'CDB · Common Data Bus', T('tag + value → every station' + (spec ? ' and the ROB' : ' and the registers'), 'etiqueta + valor → todas las estaciones' + (spec ? ' y el ROB' : ' y los registros')), T('The result is broadcast with its tag. Every station waiting for that tag grabs it in the same cycle: forwarding without going through the register file.', 'El resultado se difunde con su etiqueta. Toda estación que espere esa etiqueta lo captura en el mismo ciclo: adelantamiento sin pasar por el banco de registros.')]
-  ];
-  return `<div class="hw">${B.map((b, i) => (b[0] === 'ar' ? `<div class="hwar">${b[2]}</div>` : b[0] === 'x' ? '<div></div>' : `<button class="hwb ${b[1]}" data-h="${i}">${b[2]}<small>${b[3]}</small></button>`)).join('')}</div>
-    <div class="hwx" data-hx>${T('Click a block.', 'Pulsa un bloque.')}</div><script type="application/json" data-hd>${JSON.stringify(B.map(b => b[4]))}</script>`;
-}
-function hwInit(root) {
-  const d = JSON.parse($('[data-hd]', root).textContent);
-  $$('.hwb', root).forEach(b => (b.onclick = () => { $$('.hwb', root).forEach(x => x.classList.toggle('on', x === b)); $('[data-hx]', root).innerHTML = `<b>${b.firstChild.textContent}.</b> ${d[+b.dataset.h]}`; sfx.pop(); }));
-}
 
 View('why', {
   icon: '①', mins: 8, title: () => T('Why Tomasulo', 'Por qué Tomasulo'),
@@ -81,7 +55,7 @@ View('why', {
       <div class="mini t"><h4>2 · ${T('Register renaming', 'Renombrado de registros')}</h4><p>${T(`A register name is replaced by a ${hk('value')} or by a ${hk('pointer to the station')} that will produce it.`, `El nombre de un registro se sustituye por un ${hk('valor')} o por un ${hk('puntero a la estación')} que lo producirá.`)}</p></div>
       <div class="mini t"><h4>3 · ${T('Common Data Bus', 'Bus común de datos')}</h4><p>${T(`Results are ${hk('broadcast')} to everyone waiting, ${hp('without going through the register file first')}.`, `Los resultados se ${hk('difunden')} a todos los que esperan, ${hp('sin pasar antes por el banco de registros')}.`)}</p></div></div>
       <p class="mute">${T(`Robert Tomasulo, ${hn('1966')}, for the ${hn('IBM 360/91')}: maximise ILP without special compilers or static reordering.`, `Robert Tomasulo, ${hn('1966')}, para el ${hn('IBM 360/91')}: maximizar el ILP sin compiladores especiales ni reordenación estática.`)}</p>`)}
-    ${cb(T('The machine', 'La máquina'), 'L3_7 · 3', hwMap(false))}
+    ${cb(T('The machine', 'La máquina'), 'L3_7 · 3', dpMap('main', false))}
     ${cb(T('Loads and stores', 'Cargas y almacenamientos'), 'L3_7 · 6', `<ul class="keyl">
       <li>${T(`Address ${hk('disambiguation')} <i>(desambiguación)</i> avoids RAW, WAR and WAW hazards <b>through memory</b>.`, `La ${hk('desambiguación')} de direcciones evita los riesgos RAW, WAR y WAW <b>en memoria</b>.`)}</li>
       <li>${T(`A load ${hc('waits')} if an earlier store has an ${hk('unknown or matching address')}.`, `Una carga ${hc('espera')} si un store anterior tiene ${hk('dirección desconocida o coincidente')}.`)}</li>
@@ -94,7 +68,7 @@ View('why', {
       <li>${hc(T('Searching the stations costs power', 'La búsqueda en las estaciones consume potencia'))}</li></ul></div>
       <p>${T(`Modern cores (Intel Core, AMD Zen, ARM Cortex) add a ${hk('Reorder Buffer')} for ${hk('in-order retirement')}: Lesson 4.`, `Los procesadores modernos (Intel Core, AMD Zen, ARM Cortex) añaden un ${hk('búfer de reordenación')} para la ${hk('retirada en orden')}: Lección 4.`)}</p>`)}
     <h2>${T('Check', 'Comprueba')}</h2><div id="q"></div>${nextLink('stages')}</div>`;
-    const root = $('.lesson', m); learnInit(root); hwInit(root);
+    const root = $('.lesson', m); learnInit(root); dpMapInit(root);
     Quiz($('#q', m), 'why', [
       { type: 'mc', q: T('Which dependency does Tomasulo still have to wait for?', '¿Por qué dependencia sigue esperando Tomasulo?'), opts: ['RAW', 'WAR', 'WAW'], a: 0, why: T('It is the only real data dependency.', 'Es la única dependencia real de datos.') },
       { type: 'mc', q: T('How does Tomasulo remove a WAR hazard?', '¿Cómo elimina Tomasulo un riesgo WAR?'), opts: [T('Freezes the writer\'s WB', 'Congela el WB del escritor'), T('Copies the source value into the station at issue', 'Copia el valor fuente en la estación al emitir'), T('Blocks the writer in IS', 'Bloquea al escritor en IS')], a: 1, why: T('Once the value is in the station, the register can be overwritten.', 'Con el valor en la estación, el registro puede sobrescribirse.') },
@@ -129,9 +103,9 @@ View('stages', {
       ${rl(2, T('The RAW rule', 'La regla del RAW'), T(`Consumer's first EX = producer's ${hk('last EX/M + 1')}, which is the ${hk("producer's WB cycle")}.`, `Primer EX del consumidor = ${hk('último EX/M + 1')} del productor, que es el ${hk('ciclo de WB del productor')}.`), mini([['LD F2,45(R3)', 2, 'IF IS EX M WB'], ['MULD F0,F2,F4', 3, 'IF IS - EX EX EX WB']], 9, { hl: new Set([1]) }))}
       ${rl(3, T('Waiting is drawn IS – –', 'La espera se dibuja IS – –'), T(`Issue itself takes ${hk('one cycle')}. After it the instruction ${hk('sits in its reservation station')}, watching the CDB. The course draws that wait as dashes ${hk('shaded like IS')}, the last stage it completed, and calls it "espera en IS".`, `La emisión dura ${hk('un ciclo')}. Después la instrucción ${hk('está en su estación de reserva')}, observando el CDB. El curso dibuja esa espera con guiones ${hk('del color de IS')}, la última etapa completada, y la llama "espera en IS".`), mini([['DIVD F0,F2,F4', 1, 'IF IS EX EX EX EX WB'], ['ADDD F10,F0,F8', 2, 'IF IS - - - EX EX WB']], 9))}
       ${rl(4, T('WB is the next cycle', 'WB es el ciclo siguiente'), T(`WB = last EX/M + 1. ${hk('One write per functional unit')}, so two units can write in the same cycle.`, `WB = último EX/M + 1. ${hk('Una escritura por unidad funcional')}, así que dos unidades pueden escribir en el mismo ciclo.`), mini([['DIVD F0,F2,F4', 1, 'IF IS EX EX EX EX WB'], ['SUBD F8,F8,F14', 3, 'IF IS EX EX WB']], 9))}
-      ${rl(5, T('Memory: EX then M', 'Memoria: EX y luego M'), T(`A store also has both, and waits for its ${hk('data')} before EX <span class="mute">(solved Marcador sheet E3_6; no solved Tomasulo store in your folder)</span>.`, `Un store también tiene ambas, y espera su ${hk('dato')} antes de EX <span class="mute">(boletín resuelto del Marcador E3_6; no hay store de Tomasulo resuelto en tu carpeta)</span>.`), mini([['ADDD F2,F2,F8', 5, 'IF IS EX WB'], ['SD F2,1000(R1)', 6, 'IF IS EX M WB']], 10))}
+      ${rl(5, T('Memory: EX then M', 'Memoria: EX y luego M'), T(`A store has both. Its ${hk('data')} comes off the CDB like any operand: in E3_7, SD gets F2 in ADDD's WB cycle (8), which is also its EX.`, `Un store tiene ambas. Su ${hk('dato')} llega por el CDB como cualquier operando: en E3_7, SD recibe F2 en el ciclo de WB de ADDD (8), que es también su EX.`), mini([['ADDD F2,F2,F8', 5, 'IF IS EX WB'], ['SD F2,1000(R1)', 6, 'IF IS EX M WB']], 10, { hl: new Set([1]) }))}
       ${rl(6, T('Branches, no speculation', 'Saltos, sin especulación'), T(`What follows a branch is fetched and issued, but ${hk('does not execute')} until the branch resolves. Wrong path: ${hk('Cancel')} the cycle after the branch's EX.`, `Lo que sigue a un salto se capta y emite, pero ${hk('no ejecuta')} hasta que el salto se resuelve. Camino erróneo: ${hk('Cancel')} el ciclo siguiente al EX del salto.`), mini([['beq x12, x0, final', 5, 'IF IS - EX WB'], ['or x13, x10, x11', 6, 'IF IS - Cancel']], 10))}
-    </div><p class="mute">${T('Rule 6 is read off the E3_8 solution; its text does not state it.', 'La regla 6 se deduce de la solución de E3_8; su texto no la enuncia.')}</p>`)}
+    </div>`)}
     ${cb(T('Same program, four machines', 'El mismo programa, cuatro máquinas'), 'E3_8 · ej. 1', `<p>${T('Follow <b>sub</b>, which needs x11 from <b>ld</b>, and <b>mult</b>, which overwrites x11.', 'Sigue a <b>sub</b>, que necesita x11 de <b>ld</b>, y a <b>mult</b>, que sobrescribe x11.')}</p>
       ${segc('cmp', [['e38a', T('5 stages', '5 etapas'), T('no forwarding', 'sin forwarding')], ['e38b', T('5 stages', '5 etapas'), 'forwarding'], ['e38c', 'Marcador'], ['tom', 'Tomasulo']], 'tom')}
       <div id="cmp"></div><div class="tot" id="tot"></div><div class="cmpx" id="cmpx"></div>`)}
@@ -154,7 +128,7 @@ View('stages', {
     onSeg(root, 'cmp', cmp); cmp('tom');
     const mt = v => {
       const a = v === 'l' ? STATIC.l36 : STATIC.e36, b = simOf(v === 'l' ? 'main' : 'e37');
-      $('#mt', m).innerHTML = `<h4>Marcador · ${a.n} ${T('cycles', 'ciclos')} ${sref(a.src)}</h4>${cronoHTML(a.rows, 16)}<h4>Tomasulo · ${b.last} ${T('cycles', 'ciclos')} ${sref(v === 'l' ? 'L3_7 · 15' : T('E3_7 · simulator, no official solution', 'E3_7 · simulador, sin solución oficial'))}</h4>${cronoHTML(simRows(b), 16)}
+      $('#mt', m).innerHTML = `<h4>Marcador · ${a.n} ${T('cycles', 'ciclos')} ${sref(a.src)}</h4>${cronoHTML(a.rows, 16)}<h4>Tomasulo · ${b.last} ${T('cycles', 'ciclos')} ${sref(v === 'l' ? 'L3_7 · 15' : 'E3_7')}</h4>${cronoHTML(simRows(b), 16)}
         <div class="cmpx">${v === 'l' ? T('The 3 cycles come from RO and from reading only after WB: MULD starts in 8 instead of 6, DIVD in 12 instead of 9.', 'Los 3 ciclos vienen de RO y de leer solo tras el WB: MULD empieza en 8 en vez de 6, DIVD en 12 en vez de 9.')
     : T('In the Marcador, SUBD is blocked in IS by the WAW on F10, and because issue is sequential MULD, ADDD and SD queue behind it. In Tomasulo nobody waits for that.', 'En el Marcador, SUBD se bloquea en IS por el WAW sobre F10 y, como la emisión es secuencial, MULD, ADDD y SD hacen cola detrás. En Tomasulo nadie espera por eso.')}</div>`;
     };

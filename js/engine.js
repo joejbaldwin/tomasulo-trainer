@@ -6,7 +6,7 @@
    - IF one per cycle; the next IF happens when the previous instruction leaves for IS      [E3_6 solution]
    - IS in order, one per cycle, needs a free station (and ROB entry when speculating)      [L3_7 s8, L3_8 s7]
    - a consumer starts EX the cycle after its producer's last EX/M = the producer's WB cycle [L3_7 s13-15]
-   - load/store: EX (address) then M; WB is the cycle after the last EX/M                    [L3_7 s9, E3_6]
+   - load/store: EX (address) then M; WB is the cycle after the last EX/M                    [L3_7 s9, E3_6, E3_7]
    - no speculation: nothing after an unresolved branch starts EX                            [E3_8 solution]
    - speculation: commit in order, after WB; nothing commits in the cycle a branch commits   [L3_8 s13, s15]
 */

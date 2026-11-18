@@ -107,7 +107,7 @@ View('build', {
         <ul>${lines.map(([gk, h]) => `<li><span class="sg s-none">?</span><span>${h}</span></li>`).join('')}${!lines.length && w === '-' ? `<li><span></span><span>${T('It is still waiting, exactly as in the previous cycle.', 'Sigue esperando, igual que en el ciclo anterior.')}</span></li>` : ''}</ul></div>`;
     };
     $('#bclr', m).onclick = () => { for (const k in g) delete g[k]; BS.checked = false; save(); grid(); $('#bsc', m).innerHTML = ''; $('#bout', m).innerHTML = ''; };
-    $('#bsol', m).onclick = () => { sfx.pop(); $('#bout', m).innerHTML = `<h4>${T('Solution', 'Solución')}${sc.kind === 'nosol' ? ` <small class="mute">${T('simulator; no official solution in your folder', 'simulador; sin solución oficial en tu carpeta')}</small>` : sc.kind === 'mine' ? ` <small class="mute">${T('simulator', 'simulador')}</small>` : ''}</h4>${cronoHTML(simRows(s).map(r => ({ text: r.text, cells: Object.fromEntries(Object.entries(r.cells).map(([c, v]) => [c, v === 'MEM' ? 'M' : v])) })), n)}${(sc.notes || []).map(nt => `<p class="mnote"><b>ⓘ</b> ${nt.t()}</p>`).join('')}`; };
+    $('#bsol', m).onclick = () => { sfx.pop(); $('#bout', m).innerHTML = `<h4>${T('Solution', 'Solución')}${sc.kind === 'mine' ? ` <small class="mute">${T('simulator', 'simulador')}</small>` : ''}</h4>${cronoHTML(simRows(s).map(r => ({ text: r.text, cells: Object.fromEntries(Object.entries(r.cells).map(([c, v]) => [c, v === 'MEM' ? 'M' : v])) })), n)}${(sc.notes || []).map(nt => `<p class="mnote"><b>ⓘ</b> ${nt.t()}</p>`).join('')}`; };
     const nb = $('#bnew', m); if (nb) nb.onclick = () => { BS.rnd = rndScenario(); BS.n++; route(true); };
     const key2 = e => {
       if (!BS.foc || e.ctrlKey || e.metaKey || e.altKey) return;

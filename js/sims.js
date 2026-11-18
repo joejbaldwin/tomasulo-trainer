@@ -41,7 +41,7 @@ View('rob', {
       <li>${T(`Hardware speculation = ${hk('dynamic prediction')} + ${hk('speculation')} that can be undone + ${hk('dynamic scheduling')}.`, `Especulación hardware = ${hk('predicción dinámica')} + ${hk('especulación')} que se puede deshacer + ${hk('planificación dinámica')}.`)}</li>
       <li>${T(`The ${hk('Reorder Buffer (ROB)')} keeps each result from the ${hk('end of execution until commit')}. Registers are updated ${hk('at commit')}, not at WB.`, `El ${hk('búfer de reordenación (ROB)')} guarda cada resultado desde el ${hk('fin de la ejecución hasta el commit')}. Los registros se actualizan ${hk('en el commit')}, no en WB.`)}</li>
       <li>${T(`Later instructions can ${hp('read speculative operands from the ROB')}.`, `Las instrucciones posteriores pueden ${hp('leer operandos especulativos del ROB')}.`)}</li></ul>
-      ${hwMap(true)}`)}
+      ${dpMap('s13', true)}`)}
     ${cb(T('What changes in each stage', 'Qué cambia en cada etapa'), 'L3_8 · 6–11', `<div class="stg4">
       <div class="stc"><h4 class="s-is">IS<small>${T('issue', 'emisión')}</small></h4><ul><li>${T(`Needs a free station ${hk('and a free ROB entry')}; otherwise ${hc('stall')}.`, `Necesita una estación libre ${hk('y una entrada libre del ROB')}; si no, ${hc('se detiene')}.`)}</li><li>${T(`The ${hk('ROB entry number')} is the tag on the CDB.`, `El ${hk('número de entrada del ROB')} es la etiqueta en el CDB.`)}</li></ul></div>
       <div class="stc"><h4 class="s-ex">EX / M<small>${T('execute', 'ejecución')}</small></h4><ul><li>${T('As in Tomasulo, but it does <b>not</b> wait for earlier branches.', 'Como en Tomasulo, pero <b>no</b> espera a saltos anteriores.')}</li></ul></div>
@@ -55,7 +55,7 @@ View('rob', {
     <h2 id="sim">${T('Commit walkthrough', 'Recorrido del commit')}</h2>
     ${scPick('rob', ROB_IDS, id)}<div id="mc"></div>
     <h2>${T('Check', 'Comprueba')}</h2><div id="q"></div>${nextLink('build')}</div>`;
-    const root = $('.lesson', m); learnInit(root); hwInit(root);
+    const root = $('.lesson', m); learnInit(root); dpMapInit(root);
     Machine($('#mc', m), id, {
       onEnd: () => markDone('rob-' + id),
       end: () => (nx ? `<a href="#/rob/${nx}">${T('Next case', 'Siguiente caso')}: ${SCEN[nx].title()} →</a>` : '')

@@ -1,5 +1,5 @@
 'use strict';
-/* Cronogram renderer + the step-through machine (cronogram, "where is everyone" lanes, narration, course tables). */
+/* Cronogram renderer + the step-through machine (cronogram, narration, live datapath, course tables). */
 
 const STG = { IF: 'if', IS: 'is', ID: 'is', RO: 'ro', EX: 'ex', M: 'm', MEM: 'm', WB: 'wb', C: 'c', Cancel: 'x' };
 const sg = (v, t) => `<span class="sg s-${STG[v] || v}">${t || v}</span>`;
@@ -24,7 +24,7 @@ function cronoHTML(rows, n, o = {}) {
   });
   return h + '</tbody></table></div>';
 }
-const stageKey = (extra = '') => `<div class="skey">${sg('IF')}${sg('IS')}${sg('EX')}${sg('M')}${sg('WB')}${extra}<span class="sg s-is w">–</span><small>${T('waiting, shaded like the last stage completed', 'espera, con el color de la última etapa completada')}</small></div>`;
+const stageKey = (extra = '') => `<div class="skey">${sg('IF')}${sg('IS')}${sg('EX')}${sg('M')}${sg('WB')}${extra}<span class="sg s-is w">–</span><small>${T('waiting', 'espera')}</small></div>`;
 
 const opName = x => x.ins.text.replace(/^\w+:\s*/, '').split(/\s+/)[0];
 const nm = x => opName(x) + (x.ins.rd ? ' ' + x.ins.rd : x.ins.k === 'store' ? ' ' + x.ins.src[1] : '');
@@ -93,9 +93,8 @@ function evLine(s, e) {
 const MS = {};
 function Machine(host, id, opt = {}) {
   const sc = SCEN[id], s = simOf(id), st = MS[id] || (MS[id] = { t: 0, asked: {}, sel: null, ask: null });
-  const spec = s.spec, U = UNIT(), n = Math.max(s.last, 9);
+  const spec = s.spec, U = UNIT(), n = Math.max(s.last, 9), G = dpGeom(s), W = dpWires(G);
   let timer = null;
-  const kind = { course: [T('course cronogram, reproduced cell for cell', 'cronograma del curso, reproducido celda a celda'), 'k-c'], nosol: [T('course exercise, no official solution', 'ejercicio del curso, sin solución oficial'), 'k-n'], mine: [T('extra case built from a slide rule', 'caso extra construido con una regla de las diapositivas'), 'k-m'] }[sc.kind];
   const pills = [];
   ['mul', 'div', 'add', 'sub', 'log', 'br'].forEach(k => { if (s.order.includes(k)) pills.push(`<span><b>${U[k]}</b> ${s.lat[k]} ${T('cyc', 'cic')}</span>`); });
   if (s.order.includes('load') || s.order.includes('store')) pills.push(`<span><b>${T('Memory', 'Memoria')}</b> 1 EX + ${s.memLat} ${sc.mlabel || 'M'}</span>`);
@@ -107,7 +106,7 @@ function Machine(host, id, opt = {}) {
   notes.forEach((nt, i) => { if (nt.r != null) noteIx[nt.r + ',' + nt.c] = i + 1; });
 
   host.innerHTML = `<div class="mach">
-    <div class="mhead"><div class="mtitle"><h3>${sc.title()}</h3><span class="kb ${kind[1]}">${kind[0]}</span>${sref(sc.src)}</div>
+    <div class="mhead"><div class="mtitle"><h3>${sc.title()}</h3>${sc.kind === 'mine' ? `<span class="kb k-m">${T('extra case', 'caso extra')}</span>` : ''}${sref(sc.src)}</div>
       <p class="watch">👁 ${sc.watch()}</p>
       <div class="chips cfgp">${pills.join('')}</div>
       <div class="deps">${s.deps.map((d, i) => `<button class="dep ${d.t.toLowerCase()}" data-d="${i}"><b>${d.t}</b> ${d.r} · ${dn(d)}</button>`).join('') || `<span class="mute">${T('No dependencies', 'Sin dependencias')}</span>`}</div>
@@ -119,43 +118,24 @@ function Machine(host, id, opt = {}) {
     <div class="mslot"></div>
     <div class="mcr"></div>${stageKey(spec ? sg('C') + sg('Cancel') : s.order.includes('br') ? sg('Cancel') : '')}
     <div class="mnotes"></div>
-    <div class="mgrid"><div class="mnar"></div><div class="mlanes"></div></div>
+    <div class="mnar"></div>
+    <div class="mdp"><div class="dpwrap"><div class="dpsvg"></div></div><div class="dpx"></div></div>
     <div class="mtabs"></div></div>`;
   const E = c => $(c, host);
+  dpBind(E('.mdp'), spec);
 
-  const laneOf = (x, t) => {
-    if (x.IF > t) return null;
-    const v = x.cells[t];
-    if (v === 'Cancel') return 'x';
-    if (!v) return x.X && x.X < t ? null : x.cells[t - 1] || Object.keys(x.cells).some(c => +c < t) ? 'done' : null;
-    if (v === '-') { let c = t; while (x.cells[c] === '-') c--; return { IF: 'q', IS: 'rs', EX: 'fu', WB: 'rob' }[x.cells[c]] || 'rs'; }
-    return { IF: 'q', IS: 'rs', EX: 'fu', M: 'fu', MEM: 'fu', WB: 'cdb', C: 'done' }[v];
-  };
-  function lanes(t) {
-    const L = [['q', T('Queue', 'Cola'), 'if'], ['rs', T('Stations', 'Estaciones'), 'is'], ['fu', T('Units', 'Unidades'), 'ex'], ['cdb', 'CDB', 'wb']];
-    if (spec) L.push(['rob', T('ROB, waiting', 'ROB, espera'), 'wb']);
-    L.push(['done', spec ? T('Committed', 'Confirmadas') : T('Finished', 'Terminadas'), spec ? 'c' : 'done']);
-    const end = x => Math.max(...Object.keys(x.cells).map(Number));
-    return `<div class="lanes" style="grid-template-columns:repeat(${L.length},minmax(0,1fr))">${L.map(([k, name, c]) => {
-      let xs = s.insts.filter(x => laneOf(x, t) === k);
-      if (k === 'done') xs = xs.slice().sort((a, b) => end(a) - end(b) || a.id - b.id);
-      const dead = k === 'q' ? s.insts.filter(x => laneOf(x, t) === 'x') : [];
-      return `<div class="lane l-${c}"><h5>${name}</h5>${xs.map(x => `<span class="tok${laneOf(x, t - 1) !== k ? ' in' : ''}${x.cells[t] === '-' ? ' wt' : ''}" title="${x.ins.text}"><i>${x.id + 1}</i>${nm(x)}</span>`).join('')}${dead.map(x => `<span class="tok dead"><i>${x.id + 1}</i>${nm(x)}</span>`).join('')}</div>`;
-    }).join('')}</div>`;
-  }
   function tables(t) {
     const sn = s.snaps[t], pv = s.snaps[t - 1];
     if (!sn) return `<p class="mute">${T('The tables fill in as soon as the first instruction is issued.', 'Las tablas se rellenan en cuanto se emite la primera instrucción.')}</p>`;
     const hasMem = s.order.includes('load') || s.order.includes('store');
-    let h = `<div class="cdb ${sn.cdb.length ? 'on' : ''}"><b>CDB</b>${sn.cdb.length ? sn.cdb.map(c => `<span>${qq(c.tag)} = ${vv(c.val)}</span>`).join('') : `<i>${T('idle', 'libre')}</i>`}</div>`;
-    h += `<div class="tgrid"><div><h4>${T('Reservation stations and buffers', 'Estaciones de reserva y búferes')} <small>${T('estaciones de reserva', '')}</small></h4><div class="tw"><table class="mt"><thead><tr><th>${T('Name', 'Nombre')}</th><th>Busy</th><th>Op</th><th>Vj</th><th>Vk</th><th>Qj</th><th>Qk</th>${hasMem ? '<th>A</th>' : ''}${spec ? '<th>Dest</th>' : ''}<th></th></tr></thead><tbody>`;
+    let h = `<div class="tgrid"><div><h4>${T('Reservation stations and buffers', 'Estaciones de reserva y búferes')}</h4><div class="tw"><table class="mt"><thead><tr><th>${T('Name', 'Nombre')}</th><th>Busy</th><th>Op</th><th>Vj</th><th>Vk</th><th>Qj</th><th>Qk</th>${hasMem ? '<th>A</th>' : ''}${spec ? '<th>Dest</th>' : ''}<th></th></tr></thead><tbody>`;
     sn.rs.forEach(g => g.rows.forEach(r => {
       if (r.i == null) { h += `<tr class="free"><td>${r.name}</td><td>${T('no', 'no')}</td><td colspan="${5 + (hasMem ? 1 : 0) + (spec ? 1 : 0) + 1}"></td></tr>`; return; }
       const cell = j => (r.V[j] != null ? `<span class="vch${r.cap[j] ? ' cap' : ''}">${r.V[j]}</span>` : ''), qc = j => (r.Q[j] != null ? qq(r.Q[j]) : '');
       const state = r.wb ? T('→ CDB, frees', '→ CDB, se libera') : r.run ? T('executing', 'ejecutando') : r.Q.some(q => q != null) ? T('waiting', 'esperando') : T('ready', 'lista');
       h += `<tr class="${r.fresh ? 'fresh' : ''}${r.wb ? ' wbr' : ''}${r.run && !r.wb ? ' run' : ''}"><td><b>${r.name}</b></td><td>${T('yes', 'sí')}</td><td>${r.op.toUpperCase()}</td><td>${cell(0)}</td><td>${cell(1)}</td><td>${qc(0)}</td><td>${qc(1)}</td>${hasMem ? `<td>${g.k === 'load' || g.k === 'store' ? (r.addr != null ? `<b>${r.addr}</b>` : r.imm) : ''}</td>` : ''}${spec ? `<td>${r.tag}</td>` : ''}<td class="stt">${state}</td></tr>`;
     }));
-    h += `</tbody></table></div></div><div><h4>${T('Register status', 'Estado de los registros')} <small>Qi · ${T('value', 'valor')}</small></h4><div class="regs">${s.regNames.map(r => {
+    h += `</tbody></table></div></div><div><h4>${T('Register status', 'Estado de los registros')} <small>Qi</small></h4><div class="regs">${s.regNames.map(r => {
       const ch = pv && (pv.regs[r] !== sn.regs[r]), qch = (pv ? pv.stat[r] : undefined) !== sn.stat[r];
       return `<div class="rg${ch ? ' chg' : ''}"><b>${r}</b><span class="${qch ? 'chg' : ''}">${sn.stat[r] ? qq(sn.stat[r]) : '·'}</span><i>${sn.regs[r]}</i></div>`;
     }).join('')}</div>${hasMem && sn.mem.length ? `<h4 style="margin-top:12px">${T('Memory touched', 'Memoria tocada')}</h4><div class="regs">${sn.mem.map(([a, v]) => `<div class="rg${pv && !pv.mem.some(([b, w]) => b === a && w === v) ? ' chg' : ''}"><b>M[${a}]</b><i>${v}</i></div>`).join('')}</div>` : ''}</div></div>`;
@@ -196,7 +176,7 @@ function Machine(host, id, opt = {}) {
     E('.mnotes').innerHTML = notes.map((nt, i) => (nt.r != null && nt.c > t ? '' : `<p class="mnote"><b>${nt.r != null ? i + 1 : 'ⓘ'}</b> ${nt.t()}</p>`)).join('');
     if (!st.ask) { E('.mslot').innerHTML = ''; E('.mnar').innerHTML = narr(t); }
     fwdLabel();
-    E('.mlanes').innerHTML = lanes(t);
+    E('.mdp .dpsvg').innerHTML = dpSVG(s, t, G, W, { noRob: !spec }); dpPaint(E('.mdp'));
     E('.mtabs').innerHTML = tables(t);
     $('[data-go="fwd"]', host).disabled = t >= s.last; $('[data-go="back"]', host).disabled = t <= 0;
     $$('.dep', host).forEach(b => b.classList.toggle('on', +b.dataset.d === st.sel));

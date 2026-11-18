@@ -96,7 +96,7 @@ function dpLit(s, t) {
 const esc = v => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;');
 const fmtV = v => (typeof v === 'number' ? r2(v) : v);
 
-function dpSVG(s, t, G, W) {
+function dpSVG(s, t, G, W, o = {}) {
   const sn = s.snaps[t], { lit, box } = dpLit(s, t), spec = s.spec, U = UNIT();
   const tx = (x, y, str, cls = '', a = 'start') => `<text x="${x}" y="${y}" class="${cls}" text-anchor="${a}">${str}</text>`;
   const rect = (id, b, cls, title, sub) => `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="7" class="bx ${cls}${box[id] ? ' on st-' + DPCOL[box[id]] : ''}"/>`
@@ -107,10 +107,9 @@ function dpSVG(s, t, G, W) {
   /* wires: base layer, then the lit ones on top so shared segments show the live colour */
   const noSpec = id => !spec && (id === 'alloc' || id === 'nreg' || id === 'creg' || id === 'cmem' || id === 'cdb-rob' || id.startsWith('rob-'));
   const noMem = id => !s.order.some(isMem) && /mem|addr/.test(id) && id !== 'cmem';
-  Object.entries(W).forEach(([id, p]) => {
-    if (spec && id === 'cdb-reg') return;
-    h += `<polyline points="${p}" class="w${noSpec(id) || noMem(id) ? ' off' : ''}" marker-end="url(#dpa)"/>`;
-  });
+  const shown = Object.entries(W).filter(([id]) => !(spec && id === 'cdb-reg') && !(o.noRob && noSpec(id)));
+  const live = shown.filter(([id]) => !noSpec(id) && !noMem(id));
+  shown.forEach(([id, p]) => (h += `<polyline points="${p}" class="w${noSpec(id) || noMem(id) ? ' off' : ''}" marker-end="url(#dpa)"/>`));
   Object.entries(lit).forEach(([id, c]) => { if (W[id]) h += `<polyline points="${W[id]}" class="w lit st-${DPCOL[c]}"/>`; });
 
   /* wire labels */
@@ -133,8 +132,9 @@ function dpSVG(s, t, G, W) {
   if (!inQ.length) h += tx(G.q.x + G.q.w / 2, G.q.y + 70, T('empty', 'vacía'), 'mt', 'middle');
 
   /* ROB */
-  h += rect('rob', G.rob, 'k-rob' + (spec ? '' : ' off'), T('Reorder buffer · ROB', 'Búfer de reordenación · ROB'), spec ? T('head ↓', 'cabeza ↓') : '');
-  if (!spec) h += tx(G.rob.x + G.rob.w / 2, G.rob.y + 100, T('not used: no speculation', 'no se usa: sin especulación'), 'mt', 'middle') + tx(G.rob.x + G.rob.w / 2, G.rob.y + 120, T('(pick an L3_8 case above)', '(elige un caso de L3_8 arriba)'), 'mt', 'middle');
+  if (!o.noRob) h += rect('rob', G.rob, 'k-rob' + (spec ? '' : ' off'), T('Reorder buffer · ROB', 'Búfer de reordenación · ROB'), spec ? T('head ↓', 'cabeza ↓') : '');
+  if (o.noRob) { /* plain Tomasulo: no ROB box at all */ }
+  else if (!spec) h += tx(G.rob.x + G.rob.w / 2, G.rob.y + 100, T('not used: no speculation', 'no se usa: sin especulación'), 'mt', 'middle') + tx(G.rob.x + G.rob.w / 2, G.rob.y + 120, T('(pick an L3_8 case above)', '(elige un caso de L3_8 arriba)'), 'mt', 'middle');
   else if (sn) {
     const pv = s.snaps[t - 1], rows = [];
     sn.gone.forEach(g => rows.push({ tag: g.tag, i: g.i, cls: 'gone', v: T('commit ✓', 'confirma ✓') }));
@@ -173,8 +173,10 @@ function dpSVG(s, t, G, W) {
   h += rect('au', G.au, 'k-au', T('Address unit', 'Unidad de direcciones'));
   exNow('mem').forEach(x => (h += tx(G.au.x + G.au.w - 8, G.au.y + 26, esc(nm(x)) + ` @${x.addr}`, 'mono nw', 'end')));
   h += rect('buf', G.buf, 'k-buf', T('Load/store buffers', 'Búferes de carga/alm.'));
-  if (sn) {
-    const rows = sn.rs.filter(r => isMem(r.k)).flatMap(r => r.rows);
+  /* before cycle 1 every station is free: show just their names */
+  const rsNow = sn ? sn.rs : s.snaps[1] ? s.snaps[1].rs.map(g => ({ k: g.k, rows: g.rows.map(r => ({ name: r.name, V: [], Q: [], cap: [] })) })) : [];
+  if (rsNow.length) {
+    const rows = rsNow.filter(r => isMem(r.k)).flatMap(r => r.rows);
     rows.slice(0, 5).forEach((r, k) => {
       const y = G.buf.y + 22 + k * 20, x = r.i != null ? s.insts[r.i] : null;
       h += `<rect x="${G.buf.x + 4}" y="${y}" width="${G.buf.w - 8}" height="18" rx="3" class="rr ${r.fresh ? 'isn' : ''} ${r.wb ? 'wbn' : ''}"/>`;
@@ -189,7 +191,7 @@ function dpSVG(s, t, G, W) {
   Object.entries(G.grp).forEach(([k, g]) => {
     const b = { x: g.x, y: g.y, w: g.w, h: g.h };
     h += rect('rs-' + k, b, 'k-rs', T('Stations', 'Estaciones'), RSN[k]);
-    const rows = sn ? sn.rs.find(r => r.k === k).rows : [];
+    const grp = rsNow.find(r => r.k === k), rows = grp ? grp.rows : [];
     rows.forEach((r, j) => {
       const y = g.y + 22 + j * 20, x = r.i != null ? s.insts[r.i] : null, c4 = g.w / 4;
       h += `<rect x="${g.x + 4}" y="${y}" width="${g.w - 8}" height="18" rx="3" class="rr ${r.fresh ? 'isn' : ''} ${r.wb ? 'wbn' : ''} ${r.run && !r.wb ? 'run' : ''}"/>`;
@@ -211,8 +213,67 @@ function dpSVG(s, t, G, W) {
     const x0 = 300 + i * 200;
     h += `<rect x="${x0 - 70}" y="${G.cdbY - 12}" width="140" height="24" rx="12" class="cdbv"/>` + tx(x0, G.cdbY + 5, `${c.tag} = ${fmtV(c.val)}`, 'mono cdbt', 'middle');
   });
+
+  /* click targets: buses first, boxes on top */
+  live.forEach(([id, p]) => (h += `<polyline points="${p}" class="hitw" data-k="${dpKeyOf(id)}"/>`));
+  const hb = (id, b) => (h += `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="7" class="hitb" data-k="${dpKeyOf(id)}"/>`);
+  hb('q', G.q); if (!o.noRob) hb('rob', G.rob); hb('reg', G.reg);
+  if (s.order.some(isMem)) { hb('au', G.au); hb('buf', G.buf); hb('mu', G.mu); }
+  Object.entries(G.grp).forEach(([k, g]) => { hb('rs-' + k, { x: g.x, y: g.y, w: g.w, h: g.h }); hb('fu-' + k, { x: g.ux, y: g.uy, w: g.uw, h: g.uh }); });
   return h + '</svg>';
 }
+
+/* what each box and bus is for, shown when it is clicked */
+const dpKeyOf = id => (/^op-/.test(id) ? 'op' : /^reg-/.test(id) ? 'opnd' : /^rob-/.test(id) ? 'robop' : /^out-/.test(id) ? 'out' : /^cap-/.test(id) ? 'cap'
+  : /^cdb/.test(id) ? 'cdb' : /^rs-/.test(id) ? 'rs' : /^fu-/.test(id) ? 'fu' : id);
+function dpInfo(spec) {
+  const tag = spec ? T('ROB entry', 'entrada del ROB') : T('station', 'estación');
+  return {
+    q: [T('Instruction queue', 'Cola de instrucciones'), T(`IF puts each fetched instruction here. IS takes them from the head, <b>in order</b>, one per cycle. If the head cannot issue (no free station${spec ? ' or ROB entry' : ''}), the queue fills up and IF stalls.`, `IF deja aquí cada instrucción captada. IS las toma de la cabeza, <b>en orden</b>, una por ciclo. Si la cabeza no puede emitirse (sin estación${spec ? ' o entrada del ROB' : ''} libre), la cola se llena e IF se detiene.`)],
+    rob: spec ? [T('Reorder buffer (ROB)', 'Búfer de reordenación (ROB)'), T('One entry per issued instruction, in program order; the entry number is the tag. It holds each result from WB until <b>commit</b>. Only the <b>head</b> commits, so registers and memory change only from here. A mispredicted branch at the head flushes the whole ROB.', 'Una entrada por instrucción emitida, en orden de programa; el número de entrada es la etiqueta. Guarda cada resultado desde WB hasta el <b>commit</b>. Solo confirma la <b>cabeza</b>, así que registros y memoria solo cambian desde aquí. Un salto mal predicho en la cabeza vacía todo el ROB.')]
+      : [T('Reorder buffer (ROB)', 'Búfer de reordenación (ROB)'), T('Not used without speculation: results go from the CDB straight into the registers.', 'No se usa sin especulación: los resultados pasan del CDB directamente a los registros.')],
+    reg: [T('Registers + status (Qi)', 'Registros + estado (Qi)'), T(`Each register holds a value, or the tag of the ${tag} that will produce it. That status table is the <b>renaming</b>: it is what removes WAW.${spec ? ' Registers are written only at commit.' : ''}`, `Cada registro guarda un valor, o la etiqueta de la ${tag} que lo producirá. Esa tabla de estado es el <b>renombrado</b>: es lo que elimina el WAW.${spec ? ' Los registros solo se escriben en el commit.' : ''}`)],
+    au: [T('Address unit', 'Unidad de direcciones'), T('EX of a load or store: address = offset + base register.', 'EX de una carga o store: dirección = desplazamiento + registro base.')],
+    buf: [T('Load/store buffers', 'Búferes de carga/almacenamiento'), T('Hold the address and, for a store, the data still to be written. A load waits here if an earlier store has an unknown or matching address.', 'Guardan la dirección y, en un store, el dato pendiente de escribir. Una carga espera aquí si un store anterior tiene dirección desconocida o coincidente.')],
+    mu: [T('Memory unit', 'Unidad de memoria'), T(`The M stage: the access itself.${spec ? ' A store writes memory only at commit.' : ''}`, `La etapa M: el acceso en sí.${spec ? ' Un store escribe en memoria solo en el commit.' : ''}`)],
+    rs: [T('Reservation stations', 'Estaciones de reserva'), T('One group per functional unit. Each holds the operation and its operands: a value (V) or the tag of who will produce it (Q). The instruction waits here (drawn IS – –), so it blocks nobody behind it. Freed after WB.', 'Un grupo por unidad funcional. Cada una guarda la operación y sus operandos: un valor (V) o la etiqueta de quien lo producirá (Q). La instrucción espera aquí (se dibuja IS – –), así que no bloquea a nadie detrás. Se libera tras el WB.')],
+    fu: [T('Functional unit', 'Unidad funcional'), T('EX: runs for its latency once a station has every operand as a value. If several stations are ready for one unit, the oldest goes first (FIFO).', 'EX: ejecuta durante su latencia cuando una estación tiene todos los operandos como valores. Si varias están listas para una unidad, va primero la más antigua (FIFO).')],
+    cdb: [T('CDB · common data bus', 'CDB · bus común de datos'), T(`WB: the result goes out with its tag to every waiting station and ${spec ? 'to its ROB entry' : 'to the registers (only if the register status still points to that tag)'}. One write per functional unit per cycle.`, `WB: el resultado sale con su etiqueta hacia toda estación que espera y ${spec ? 'hacia su entrada del ROB' : 'hacia los registros (solo si el estado del registro aún apunta a esa etiqueta)'}. Una escritura por unidad funcional y ciclo.`)],
+    fetch: [T('From the instruction unit', 'Desde la unidad de instrucciones'), T('IF: one instruction per cycle into the queue.', 'IF: una instrucción por ciclo hacia la cola.')],
+    op: [T('Operation bus', 'Bus de operación'), T('IS: carries the operation from the head of the queue to a free station (loads and stores: to the address unit).', 'IS: lleva la operación de la cabeza de la cola a una estación libre (cargas y stores: a la unidad de direcciones).')],
+    opnd: [T('Operand buses', 'Buses de operandos'), T(`IS: carry operand values from the registers into the station. If a register is not ready, the station gets the tag of the ${tag} that will produce it.`, `IS: llevan los valores de los operandos de los registros a la estación. Si un registro no está listo, la estación recibe la etiqueta de la ${tag} que lo producirá.`)],
+    robop: [T('Operand from the ROB', 'Operando desde el ROB'), T('IS: if the producer has finished but not committed, the value is read from its ROB entry.', 'IS: si el productor ha terminado pero no ha confirmado, el valor se lee de su entrada del ROB.')],
+    alloc: [T('New ROB entry', 'Nueva entrada del ROB'), T('IS: every issued instruction takes the next entry at the tail. ROB full → issue stalls.', 'IS: cada instrucción emitida ocupa la siguiente entrada al final. ROB lleno → la emisión se detiene.')],
+    nreg: [T('Tag into the register status', 'Etiqueta al estado de registros'), T("IS: the ROB entry number becomes the destination register's tag (renaming).", 'IS: el número de entrada del ROB pasa a ser la etiqueta del registro destino (renombrado).')],
+    creg: [T('Data at commit', 'Datos al confirmar'), T("C: the head's value is copied into its register and the entry is freed.", 'C: el valor de la cabeza se copia en su registro y se libera la entrada.')],
+    cmem: [T('Store commit', 'Commit de un store'), T('C: a store at the head sends address + data to memory. Only now is memory written.', 'C: un store en la cabeza envía dirección + dato a memoria. Solo ahora se escribe la memoria.')],
+    addr: [T('Address → buffer', 'Dirección → búfer'), T('EX of a load/store: the computed address goes into its buffer.', 'EX de una carga/store: la dirección calculada va a su búfer.')],
+    mem: [T('Buffer → memory', 'Búfer → memoria'), T('M: the buffer sends the access to the memory unit.', 'M: el búfer envía el acceso a la unidad de memoria.')],
+    out: [T('Result → CDB', 'Resultado → CDB'), T('WB: the cycle after the last EX/M, the unit puts result + tag on the CDB.', 'WB: el ciclo siguiente al último EX/M, la unidad pone resultado + etiqueta en el CDB.')],
+    cap: [T('Stations watch the CDB', 'Las estaciones vigilan el CDB'), T('A station waiting for that tag captures the value in the same cycle and can start EX right away: forwarding without going through the registers.', 'Una estación que espera esa etiqueta captura el valor en el mismo ciclo y puede empezar EX enseguida: adelantamiento sin pasar por los registros.')]
+  };
+}
+/* click handling survives redraws: the selection lives on the container */
+function dpBind(root, spec) {
+  root._dpD = dpInfo(spec);
+  root.addEventListener('click', e => {
+    const el = e.target.closest('[data-k]'); if (!el || !root.contains(el) || !el.closest('svg')) return;
+    root.dataset.sel = root.dataset.sel === el.dataset.k ? '' : el.dataset.k; dpPaint(root); sfx.pop();
+  });
+  dpPaint(root);
+}
+function dpPaint(root) {
+  const k = root.dataset.sel, D = root._dpD, x = $('.dpx', root);
+  if (!D) return;
+  $$('svg [data-k]', root).forEach(e => e.classList.toggle('sel', e.dataset.k === k));
+  if (x) x.innerHTML = k && D[k] ? `<b>${D[k][0]}.</b> ${D[k][1]}` : `<span class="mute">${T('Click any box or bus to see what it does.', 'Pulsa cualquier caja o bus para ver qué hace.')}</span>`;
+}
+/* a still picture of the machine for the lessons */
+function dpMap(id, spec) {
+  const s = simOf(id), G = dpGeom(s), W = dpWires(G);
+  return `<div class="dpmap" data-spec="${spec ? 1 : 0}"><div class="dpwrap">${dpSVG(s, 0, G, W, { noRob: !spec })}</div><div class="dpx"></div></div>`;
+}
+const dpMapInit = root => $$('.dpmap', root).forEach(r => dpBind(r, r.dataset.spec === '1'));
 
 /* the commit check the user does at the start of every cycle */
 function dpCommit(s, t) {
@@ -293,7 +354,7 @@ View('datapath', {
         <div class="mcyc"><small>${T('cycle', 'ciclo')}</small><b></b></div>
         <button class="btn" data-go="fwd">${T('Next cycle', 'Siguiente ciclo')} ▶</button><button class="btn ghost" data-go="play">▶▶ ${T('Play', 'Auto')}</button>
         <input type="range" min="0" max="${s.last}" value="0" class="mrng"><span class="mute mkb">← →</span></div>
-      <div class="dpview"><div class="mcr dpcr"></div><div class="dpstrip"></div><div class="dpwrap"><div class="dpsvg"></div></div></div>
+      <div class="dpview"><div class="mcr dpcr"></div><div class="dpstrip"></div><div class="dpwrap"><div class="dpsvg"></div></div><div class="dpx"></div></div>
       <details class="dpmore"><summary>${T('Full explanation of this cycle', 'Explicación completa de este ciclo')}</summary>
         <div class="dpgrid"><div class="dpcard"><div class="kicker">${s.spec ? T('Commit check · head of the ROB', 'Comprobación de commit · cabeza del ROB') : T('No commit stage', 'Sin etapa de commit')}</div><div class="dpc"></div>
           <div class="kicker" style="margin-top:12px">${T('This cycle', 'Este ciclo')}</div><div class="dpn"></div></div>
@@ -317,7 +378,7 @@ View('datapath', {
     function draw(moved) {
       const t = st.t;
       E('.mcyc b').textContent = t + ' / ' + s.last; E('.mrng').value = t;
-      E('.dpsvg').innerHTML = dpSVG(s, t, G, W);
+      E('.dpsvg').innerHTML = dpSVG(s, t, G, W); dpPaint(E('.dpview'));
       E('.dpc').innerHTML = dpCommit(s, t); E('.dpn').innerHTML = narr(t); E('.dpk').innerHTML = dpKey(s, t);
       E('.dpstrip').innerHTML = `<span class="dpcy">${T('Cycle', 'Ciclo')} ${t}</span>` + dpStrip(s, t);
       fit();
@@ -356,6 +417,7 @@ View('datapath', {
       b.innerHTML = `❚❚ ${T('Pause', 'Pausa')}`; go('fwd'); timer = setInterval(() => go('fwd'), 1600);
     }));
     E('.mrng').oninput = e => { stop(); st.t = +e.target.value; draw(); };
+    dpBind(E('.dpview'), s.spec);
     const key = e => {
       if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) && e.target.type !== 'range') return;
       if (e.key === 'ArrowRight') { e.preventDefault(); go('fwd'); } else if (e.key === 'ArrowLeft') { e.preventDefault(); go('back'); }

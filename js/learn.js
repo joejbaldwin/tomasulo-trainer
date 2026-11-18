@@ -29,7 +29,7 @@ function learnInit(root) {
   const upd = () => {
     const all = $$('.cz', root), open = all.filter(e => e.classList.contains('open')).length;
     root.classList.toggle('recall', LM.recall);
-    cnt.innerHTML = LM.recall ? `<b>${open}/${all.length}</b> ${T('recalled — say it, then click the blank', 'recordadas — dilo y luego haz clic en el hueco')}` : T('Recall blanks out every highlighted term so you have to produce it.', 'Recordar deja en blanco cada término resaltado para que tengas que producirlo.');
+    cnt.innerHTML = LM.recall ? `<b>${open}/${all.length}</b> ${T('recalled — say it, then click the blank', 'recordadas — dilo y luego haz clic en el hueco')}` : '';
     hide.style.display = LM.recall ? '' : 'none';
     all.forEach(e => { if (LM.recall) e.tabIndex = 0; else e.removeAttribute('tabindex'); });
   };
