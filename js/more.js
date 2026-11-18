@@ -9,6 +9,82 @@ const TLPG = {
   smt: ['bbrr', 'gggr', 'rg..', 'bo..', 'rr..', 'bbbb', 'oo..', 'gb..', 'oo..', 'go.r']
 };
 
+/* Guided walk-through of the four TLPG grids: one grid at a time, highlights and labels added step by step. */
+function tlpWalk(box, cls) {
+  const W = 4;
+  const at = (k, r, c) => TLPG[k][r][c];
+  const all = (k, test) => { const o = []; TLPG[k].forEach((row, r) => [...row].forEach((ch, c) => test(ch, r, row) && o.push([r, c]))); return o; };
+  const usedC = k => all(k, ch => ch !== '.');
+  const hW = k => all(k, (ch, r, row) => ch === '.' && row !== '....'); /* empty slot in a row that issued something */
+  const vW = k => all(k, (ch, r, row) => row === '....'); /* whole empty row */
+  const row = (r, k, f) => [0, 1, 2, 3].filter(c => !f || f(at(k, r, c))).map(c => [r, c]);
+  const rows = (k, rs, f) => rs.flatMap(r => row(r, k, f));
+  const col = (k, t) => all(k, ch => ch === t);
+  const cnt = k => usedC(k).length;
+  const name = { sup: T('Superscalar', 'Superescalar'), coarse: T('Coarse grain', 'Grano grueso'), fine: T('Fine grain', 'Grano fino'), smt: 'SMT' };
+  const ALL = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+  const STEPS = [
+    /* ---- superscalar, one thread ---- */
+    { g: 'sup', lbl: [], txt: T(`A ${hk('4-wide superscalar')} running ${hk('one thread')} (blue). Time runs ${hk('downwards')}.`, `Un ${hk('superescalar de 4 vías')} que ejecuta ${hk('un solo hilo')} (azul). El tiempo avanza ${hk('hacia abajo')}.`) },
+    { g: 'sup', lbl: [0], rows: [0], txt: T(`Each ${hk('row is one clock cycle')}. This is ${hk('cycle 1')}.`, `Cada ${hk('fila es un ciclo de reloj')}. Esta es el ${hk('ciclo 1')}.`) },
+    { g: 'sup', lbl: [0], rows: [0], hl: row(0, 'sup'), side: { 0: T('width = 4', 'ancho = 4') }, txt: T(`The ${hn('4')} boxes are the cycle's ${hk('issue slots')} (huecos de emisión). In the ideal case this implementation fetches (IF), decodes and issues ${hn('4')} instructions per cycle. That maximum is its ${hk('issue width')} (ancho de emisión).`, `Las ${hn('4')} casillas son los ${hk('huecos de emisión')} del ciclo. En el caso ideal esta implementación busca (IF), decodifica y emite ${hn('4')} instrucciones por ciclo. Ese máximo es su ${hk('ancho de emisión')}.`) },
+    { g: 'sup', lbl: [0], rows: [0], hl: row(0, 'sup', ch => ch !== '.'), side: { 0: 'IS = 2' }, txt: T(`But only ${hn('2')} are actually ${hk('issued')} (IS). The next instruction depends on one that has not finished (${hc('RAW')}), or the functional unit it needs is busy: the thread does not have enough ${hk('ILP')}.`, `Pero solo ${hn('2')} se ${hk('emiten')} de verdad (IS). La siguiente depende de una que no ha terminado (${hc('RAW')}) o su unidad funcional está ocupada: el hilo no tiene suficiente ${hk('ILP')}.`) },
+    { g: 'sup', lbl: [0], rows: [0], hl: row(0, 'sup', ch => ch === '.'), mark: 'h', side: { 0: T('2 wasted', '2 perdidos') }, txt: T(`The other ${hn('2')} slots are lost. Empty slots in a cycle that issued something are ${hk('horizontal waste')} (desperdicio horizontal), marked H.`, `Los otros ${hn('2')} huecos se pierden. Los huecos vacíos de un ciclo que sí emitió algo son ${hk('desperdicio horizontal')}, marcados H.`) },
+    { g: 'sup', rows: [4], hl: row(4, 'sup'), side: { 4: 'IS = 4' }, txt: T(`${hk('Cycle 5')}: four independent instructions were ready, so all ${hn('4')} slots are used. This is the ideal (IPC ${hn('4')} in that cycle), and it is rare.`, `${hk('Ciclo 5')}: había cuatro instrucciones independientes listas, así que se usan los ${hn('4')} huecos. Es el ideal (IPC ${hn('4')} en ese ciclo), y es raro.`) },
+    { g: 'sup', rows: [5, 6, 7], hl: rows('sup', [5, 6, 7]), mark: 'v', side: { 6: 'IS = 0' }, txt: T(`${hk('Cycles 6–8')}: nothing issues. The thread is ${hc('stalled')}, e.g. a load missed in the cache and everything after it waits for memory. A completely empty cycle is ${hk('vertical waste')} (desperdicio vertical), marked V.`, `${hk('Ciclos 6–8')}: no se emite nada. El hilo está ${hc('detenido')}, p. ej. una carga falló en caché y todo lo que viene detrás espera a memoria. Un ciclo completamente vacío es ${hk('desperdicio vertical')}, marcado V.`) },
+    { g: 'sup', mark: 'hv', sum: 1, txt: T(`Total: ${hn(cnt('sup') + '/40')} slots used. ${hn(hW('sup').length)} lost horizontally and ${hn(vW('sup').length)} vertically. The next three diagrams use ${hk('several threads')} to recover these slots.`, `Total: ${hn(cnt('sup') + '/40')} huecos usados. ${hn(hW('sup').length)} perdidos en horizontal y ${hn(vW('sup').length)} en vertical. Las tres figuras siguientes usan ${hk('varios hilos')} para recuperarlos.`) },
+    /* ---- coarse grain ---- */
+    { g: 'coarse', txt: T(`Same 4-wide core, now with ${hk('two threads')} (blue, orange), each with its own ${hk('PC and registers')}. Only ${hk('one thread owns the core')} at a time.`, `El mismo núcleo de 4 vías, ahora con ${hk('dos hilos')} (azul, naranja), cada uno con su ${hk('PC y registros')}. Solo ${hk('un hilo usa el núcleo')} a la vez.`) },
+    { g: 'coarse', rows: [0, 1, 2, 3, 4], hl: col('coarse', 'b'), txt: T(`${hk('Cycles 1–5')}: blue runs alone, just like the superscalar. Its horizontal waste is still there.`, `${hk('Ciclos 1–5')}: el azul ejecuta solo, igual que en el superescalar. Su desperdicio horizontal sigue ahí.`) },
+    { g: 'coarse', rows: [5, 6, 7, 8], hl: col('coarse', 'o'), side: { 5: T('switch', 'cambio') }, txt: T(`${hk('Cycle 6')}: this is where blue stalled for a long time before. Coarse grain ${hk('switches thread only on a long stall')}, so orange takes the core and fills cycles that used to be empty.`, `${hk('Ciclo 6')}: aquí es donde antes el azul se detenía mucho tiempo. El grano grueso ${hk('cambia de hilo solo ante una detención larga')}, así que el naranja toma el núcleo y rellena ciclos que antes estaban vacíos.`) },
+    { g: 'coarse', rows: [9], hl: row(9, 'coarse'), mark: 'v', side: { 9: 'IS = 0' }, txt: T(`${hk('Cycle 10')}: empty. A switch ${hc('empties and refills the pipeline')}, which costs cycles. So coarse grain only pays off when the stall it hides is much longer than that refill.`, `${hk('Ciclo 10')}: vacío. Un cambio ${hc('vacía y rellena el pipeline')}, y eso cuesta ciclos. Por eso el grano grueso solo compensa si la detención que oculta es mucho mayor que el rellenado.`) },
+    { g: 'coarse', hl: hW('coarse'), mark: 'h', txt: T(`Each cycle still belongs to ${hk('one thread')}, so the ${hn(hW('coarse').length)} H slots remain. Coarse grain reduces ${hk('vertical')} waste only.`, `Cada ciclo sigue siendo de ${hk('un solo hilo')}, así que los ${hn(hW('coarse').length)} huecos H siguen ahí. El grano grueso solo reduce el desperdicio ${hk('vertical')}.`) },
+    { g: 'coarse', mark: 'hv', sum: 1, txt: T(`${hn(cnt('coarse') + '/40')} slots used (superscalar: ${hn(cnt('sup'))}). Example: ${hk('IBM AS/400')}.`, `${hn(cnt('coarse') + '/40')} huecos usados (superescalar: ${hn(cnt('sup'))}). Ejemplo: ${hk('IBM AS/400')}.`) },
+    /* ---- fine grain ---- */
+    { g: 'fine', txt: T(`Now ${hk('four threads')} (blue, red, green, orange). Fine grain ${hk('switches thread every cycle')}.`, `Ahora ${hk('cuatro hilos')} (azul, rojo, verde, naranja). El grano fino ${hk('cambia de hilo cada ciclo')}.`) },
+    { g: 'fine', rows: [0, 1, 3], hl: rows('fine', [0, 1, 3], ch => ch !== '.'), txt: T(`Cycle 1 blue, cycle 2 red, cycle 4 green: the threads ${hk('take turns, cycle by cycle')} (round-robin; a stalled thread is skipped). The hardware keeps every thread's PC and registers, so the switch has ${hp('no penalty')}.`, `Ciclo 1 azul, ciclo 2 rojo, ciclo 4 verde: los hilos ${hk('se turnan ciclo a ciclo')} (round-robin; un hilo detenido se salta). El hardware guarda el PC y los registros de cada hilo, así que el cambio ${hp('no tiene penalización')}.`) },
+    { g: 'fine', rows: ALL, txt: T(`Look down the grid: ${hp('no row is empty')}. When one thread stalls, another fills its cycle. ${hk('Vertical waste')} drops to ${hn('0')}.`, `Mira la columna entera: ${hp('ninguna fila está vacía')}. Cuando un hilo se detiene, otro ocupa su ciclo. El ${hk('desperdicio vertical')} baja a ${hn('0')}.`) },
+    { g: 'fine', hl: hW('fine'), mark: 'h', txt: T(`But each row still belongs to ${hk('one thread')}, and one thread rarely has 4 independent instructions ready. ${hn(hW('fine').length)} slots of ${hk('horizontal waste')} remain.`, `Pero cada fila sigue siendo de ${hk('un solo hilo')}, y un hilo rara vez tiene 4 instrucciones independientes listas. Quedan ${hn(hW('fine').length)} huecos de ${hk('desperdicio horizontal')}.`) },
+    { g: 'fine', hl: col('fine', 'b'), txt: T(`The cost: ${hc('each thread runs more slowly')}. Blue only gets cycles 1 and 5, even when it is ready to go.`, `El coste: ${hc('cada hilo progresa más despacio')}. El azul solo tiene los ciclos 1 y 5, aunque esté listo para seguir.`) },
+    { g: 'fine', mark: 'hv', sum: 1, txt: T(`${hn(cnt('fine') + '/40')} slots used, all waste is horizontal. Example: ${hk('Sun Niagara')}.`, `${hn(cnt('fine') + '/40')} huecos usados; todo el desperdicio es horizontal. Ejemplo: ${hk('Sun Niagara')}.`) },
+    /* ---- SMT ---- */
+    { g: 'smt', rows: [0], hl: row(0, 'smt'), side: { 0: T('2 threads', '2 hilos') }, txt: T(`${hk('SMT')} (simultaneous multithreading). ${hk('Cycle 1')}: blue issues 2 and ${hk('red issues 2 in the same cycle')}. Several colours in one row is what makes it SMT.`, `${hk('SMT')} (multihilo simultáneo). ${hk('Ciclo 1')}: el azul emite 2 y ${hk('el rojo emite 2 en el mismo ciclo')}. Varios colores en una fila es lo que define al SMT.`) },
+    { g: 'smt', rows: [1], hl: row(1, 'smt'), side: { 1: T('3 + 1', '3 + 1') }, txt: T(`${hk('Cycle 2')}: green has 3 ready, and red fills the slot green could not use. Threads ${hk('fill each other\'s horizontal waste')}.`, `${hk('Ciclo 2')}: el verde tiene 3 listas, y el rojo ocupa el hueco que el verde no podía usar. Los hilos ${hk('rellenan el desperdicio horizontal de los demás')}.`) },
+    { g: 'smt', hl: usedC('smt'), txt: T(`This needs a ${hk('dynamically scheduled superscalar')} underneath: a ${hk('PC and register map per thread')}, tags in the shared structures (RS, CDB) so results reach the right thread, and the ${hk('ROB partitioned')} between threads.`, `Esto necesita debajo un ${hk('superescalar con planificación dinámica')}: ${hk('PC y mapa de registros por hilo')}, etiquetas en las estructuras compartidas (ER, CDB) para que cada resultado llegue a su hilo, y el ${hk('ROB particionado')} entre hilos.`) },
+    { g: 'smt', hl: hW('smt'), mark: 'h', txt: T(`${hn(hW('smt').length)} slots are still empty: in those cycles all threads together did not have enough ready instructions, or they ${hc('competed for caches, bandwidth and functional units')}.`, `Siguen vacíos ${hn(hW('smt').length)} huecos: en esos ciclos, todos los hilos juntos no tenían suficientes instrucciones listas, o ${hc('compitieron por cachés, ancho de banda y unidades funcionales')}.`) },
+    { g: 'smt', mark: 'hv', sum: 1, end: 1, txt: T(`${hn(cnt('smt') + '/40')}, the best of the four (superscalar ${hn(cnt('sup'))}, coarse ${hn(cnt('coarse'))}, fine ${hn(cnt('fine'))}). SMT removes vertical waste ${hk('and')} reduces horizontal waste. Examples: ${hk('Intel Core i7')}, ${hk('IBM POWER7')}.`, `${hn(cnt('smt') + '/40')}, el mejor de los cuatro (superescalar ${hn(cnt('sup'))}, grueso ${hn(cnt('coarse'))}, fino ${hn(cnt('fine'))}). El SMT elimina el desperdicio vertical ${hk('y')} reduce el horizontal. Ejemplos: ${hk('Intel Core i7')}, ${hk('IBM POWER7')}.`) }
+  ];
+  const keys = ['sup', 'coarse', 'fine', 'smt'];
+  let i = 0;
+  const draw = () => {
+    const s = STEPS[i], k = s.g, has = (list, r, c) => (list || []).some(p => p[0] === r && p[1] === c);
+    const focus = !!(s.hl || s.rows);
+    const H = s.mark && s.mark.includes('h') ? hW(k) : [], V = s.mark && s.mark.includes('v') ? vW(k) : [];
+    $('.stw-tabs', box).innerHTML = keys.map(g => `<button class="${g === k ? 'on' : ''}${keys.indexOf(g) < keys.indexOf(k) ? ' seen' : ''}" data-g="${g}">${name[g]}</button>`).join('');
+    $('.stw-h', box).textContent = name[k];
+    $('.stw-grid', box).innerHTML = TLPG[k].map((line, r) => {
+      const showL = !s.lbl || s.lbl.includes(r), on = (s.rows || []).includes(r);
+      const cells = [...line].map((ch, c) => {
+        const lit = has(s.hl, r, c), w = has(H, r, c) ? 'wh' : has(V, r, c) ? 'wv' : '';
+        const dim = focus && !lit && !(on && !s.hl);
+        return `<i class="${cls[ch]} ${lit ? 'lit' : ''} ${dim ? 'dm' : ''} ${w}">${w ? (w === 'wh' ? 'H' : 'V') : ''}</i>`;
+      }).join('');
+      return `<div class="sr${on ? ' on' : ''}"><span class="sl">${showL ? (on ? '▶ ' : '') + T('cycle ', 'ciclo ') + (r + 1) : ''}</span><div class="s4">${cells}</div><span class="ss">${s.side && s.side[r] ? s.side[r] : ''}</span></div>`;
+    }).join('') + (s.sum ? `<div class="sr sumr"><span class="sl"></span><div class="s4m">${cnt(k)}/40 ${T('used', 'usados')}</div><span class="ss"></span></div>` : '');
+    $('.stw-tx', box).innerHTML = s.txt;
+    const first = STEPS.findIndex(x => x.g === k), n = STEPS.filter(x => x.g === k).length;
+    $('.stw-n', box).textContent = `${name[k]} · ${i - first + 1}/${n}`;
+    $('[data-d="-1"]', box).disabled = i === 0;
+    $('[data-d="1"]', box).disabled = i === STEPS.length - 1;
+    $('[data-d="1"]', box).innerHTML = STEPS[i + 1] && STEPS[i + 1].g !== k ? `${name[STEPS[i + 1].g]} →` : `${T('Next', 'Siguiente')} →`;
+    $$('.stw-tabs button', box).forEach(b => (b.onclick = () => { i = STEPS.findIndex(x => x.g === b.dataset.g); draw(); sfx.pop(); }));
+  };
+  const go = d => { const j = i + d; if (j < 0 || j >= STEPS.length) return; i = j; draw(); sfx.pop(); };
+  $$('.stw-nav .btn', box).forEach(b => (b.onclick = () => go(+b.dataset.d)));
+  box.onkeydown = e => { if (e.key === 'ArrowRight') { go(1); e.preventDefault(); } if (e.key === 'ArrowLeft') { go(-1); e.preventDefault(); } };
+  draw();
+}
+
 View('threads', {
   icon: '⑥', mins: 10, title: () => T('Beyond one instruction per cycle', 'Más de una instrucción por ciclo'),
   desc: () => T('Superscalar, VLIW, and the three ways to run several threads on one core.', 'Superescalar, VLIW y las tres formas de ejecutar varios hilos en un núcleo.'),
@@ -46,6 +122,9 @@ View('threads', {
       <tr><th>${T('Coarse grain', 'Grano grueso')}</th><td>${hk(T('only on a long stall', 'solo ante una detención larga'))}</td><td>${hp(T('a thread that does not stall keeps the core', 'un hilo sin bloqueos conserva el núcleo'))}</td><td>${hc(T('the switch empties and refills the pipeline', 'el cambio vacía y rellena el pipeline'))}</td><td>${hk('IBM AS/400')}</td></tr>
       <tr><th>SMT</th><td>${hk(T('never: several threads in the same cycle', 'nunca: varios hilos en el mismo ciclo'))}</td><td>${hp(T('functional units are used more', 'mayor utilización de las unidades funcionales'))}</td><td>${hc(T('interference in caches, bandwidth and scheduling', 'interferencia en cachés, ancho de banda y planificación'))}</td><td>${hk('Intel Core i7')}, ${hk('IBM POWER7')}</td></tr></tbody></table>
       ${trap(T('SMT needs a <b>dynamically scheduled superscalar</b> underneath: per-thread PC and register maps, tags in the shared structures, and the <b>ROB partitioned</b> between threads.', 'El SMT necesita debajo un <b>superescalar con planificación dinámica</b>: PC y mapas de registros por hilo, etiquetas en las estructuras compartidas y el <b>ROB particionado</b> entre hilos.'))}`)}
+    ${cb(T('Step through the four diagrams', 'Las cuatro figuras, paso a paso'), 'L3_8 · 21–24', `<p class="mute">${T('The same four grids, one at a time, labelled bit by bit. Use Next / Back (or the arrow keys).', 'Las mismas cuatro figuras, una a una, etiquetadas poco a poco. Usa Siguiente / Atrás (o las flechas).')}</p>
+      <div class="stw" tabindex="0"><div class="stw-tabs"></div><h3 class="stw-h"></h3><div class="stw-grid"></div><div class="stw-tx"></div>
+      <div class="stw-nav"><button class="btn ghost" data-d="-1">← ${T('Back', 'Atrás')}</button><span class="stw-n"></span><button class="btn" data-d="1">${T('Next', 'Siguiente')} →</button></div></div>`)}
     <h2>${T('Check', 'Comprueba')}</h2><div id="q"></div>${nextLink('drill')}</div>`;
     const root = $('.lesson', m); learnInit(root);
     const TX = {
@@ -56,6 +135,7 @@ View('threads', {
     };
     $$('.tg', m).forEach(b => (b.onclick = () => { $$('.tg', m).forEach(x => x.classList.toggle('on', x === b)); $('#tx', m).innerHTML = TX[b.dataset.g]; sfx.pop(); }));
     $('.tg[data-g="smt"]', m).click();
+    tlpWalk($('.stw', m), cls);
     Quiz($('#q', m), 'threads', [
       { type: 'mc', q: T('Who schedules the operations in a VLIW processor?', '¿Quién planifica las operaciones en un procesador VLIW?'), opts: [T('The compiler', 'El compilador'), T('The reservation stations', 'Las estaciones de reserva'), T('The ROB', 'El ROB')], a: 0 },
       { type: 'mc', q: T('Which class has "no examples today" in the slide\'s table?', '¿Qué clase no tiene "ningún ejemplo en la actualidad" en la tabla?'), opts: [T('Static superscalar', 'Superescalar estático'), T('Dynamic superscalar without speculation', 'Superescalar dinámico sin especulación'), 'EPIC'], a: 1 },

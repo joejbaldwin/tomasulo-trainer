@@ -144,9 +144,12 @@ function Quiz(host, id, qs, opt = {}) {
     host.innerHTML = `<div class="quiz"><div class="qprog">${qs.map((_, k) => `<i class="${k < st.i ? 'd' : k === st.i ? 'c' : ''}"></i>`).join('')}<span>${st.i + 1}/${qs.length}</span></div>
       <div class="qq">${q.q}</div><div class="qa"></div><div class="qfb"></div></div>`;
     const box = host.firstElementChild, qa = $('.qa', host), fb = $('.qfb', host);
-    const good = () => {
+    /* a redraw (e.g. language switch) after a correct answer must show the answered state, not block the right option */
+    const answered = st.ok; st.ok = false;
+    const good = replay => {
       if (st.ok) return;
-      st.ok = true; if (st.tries === 0) st.first++; sfx.ok();
+      st.ok = true;
+      if (!replay) { if (st.tries === 0) st.first++; sfx.ok(); }
       $$('button,input', qa).forEach(b => (b.disabled = true));
       fb.innerHTML = `<div class="fb ok"><b>✓ ${T('Correct', 'Correcto')}.</b> ${q.why || ''}</div>
         <button class="btn" data-n>${st.i + 1 < qs.length ? T('Next →', 'Siguiente →') : T('Finish', 'Terminar')}</button>`;
@@ -174,6 +177,11 @@ function Quiz(host, id, qs, opt = {}) {
       $('[data-c]', qa).onclick = go;
       inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); go(); } };
       if (st.i > 0 || opt.focus) inp.focus({ preventScroll: true });
+    }
+    if (answered) {
+      if (q.type === 'mc') $(`.opt[data-k="${q.a}"]`, qa).classList.add('right');
+      else $('.inp', qa).value = ansText(q);
+      good(true);
     }
   };
   draw();
